@@ -109,9 +109,9 @@ char* GetBattery(const char* base)
     }
     free(co);
 
-    co = ReadFile(base, "charge_full_design");
+    co = ReadFile(base, "charge_full");
     if (co == NULL) {
-        co = ReadFile(base, "energy_full_design");
+        co = ReadFile(base, "energy_full");
         if (co == NULL) {
             return smprintf("");
         }

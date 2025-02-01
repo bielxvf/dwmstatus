@@ -22,7 +22,8 @@
 
 #define BATTERY_EMOJI "🔋"
 #define PLUG_EMOJI "🔌"
-#define CLOCK_EMOJI "🌡"
+#define TEMP_EMOJI "🌡"
+#define CLOCK_EMOJI "⏰"
 
 #define TIMEZONE "Europe/Madrid"
 
@@ -174,7 +175,7 @@ int main(int argc, char** argv)
         char* T1 = GetTemperature("/sys/devices/virtual/thermal/thermal_zone1", "temp");
         char* t = GetTimeFromTZ("%H:%M:%S", TIMEZONE);
 
-        char* status = smprintf(" %s "CLOCK_EMOJI"%s ⏰%s ", battery, T1, t);
+        char* status = smprintf(" %s "TEMP_EMOJI"%s "CLOCK_EMOJI"%s ", battery, T1, t);
         SetStatus(status);
 
         free(T1);

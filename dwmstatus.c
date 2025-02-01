@@ -24,9 +24,10 @@
 #define PLUG_EMOJI "🔌"
 #define CLOCK_EMOJI "🌡"
 
+#define TIMEZONE "Europe/Madrid"
+
 #define UNUSED(x) do { (void) x; } while (false)
 
-const char* timezone_madrid = "Europe/Madrid";
 static Display* dpy;
 
 char* smprintf(const char* fmt, ...)
@@ -171,7 +172,7 @@ int main(int argc, char** argv)
         // TODO: Use any BAT* file
         char* battery = GetBattery("/sys/class/power_supply/BAT1");
         char* T1 = GetTemperature("/sys/devices/virtual/thermal/thermal_zone1", "temp");
-        char* t = GetTimeFromTZ("%H:%M:%S", timezone_madrid);
+        char* t = GetTimeFromTZ("%H:%M:%S", TIMEZONE);
 
         char* status = smprintf(" %s "CLOCK_EMOJI"%s ⏰%s ", battery, T1, t);
         SetStatus(status);

@@ -128,18 +128,18 @@ char* GetBattery(const char *base)
     char battery_status[11];
     co = ReadFile(base, "status");
     if (strncmp(co, "Discharging", 11) == 0) {
-        sprintf(battery_status, " Unplugged");
+        sprintf(battery_status, "🔋");
     } else if(strncmp(co, "Charging", 8) == 0) {
-        sprintf(battery_status, " Charging");
+        sprintf(battery_status, "🔌");
     } else {
-        sprintf(battery_status, " Unknown");
+        sprintf(battery_status, "?");
     }
 
     if (remcap < 0 || descap < 0) {
         return smprintf("invalid");
     }
 
-    return smprintf("%.0f%%%s", ((float)remcap / (float)descap) * 100, battery_status);
+    return smprintf("%s%.0f%%", battery_status, ((float)remcap / (float)descap) * 100);
 }
 
 char* GetTemperature(const char *base, const char *sensor)

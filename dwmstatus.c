@@ -12,20 +12,24 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
-
+#include <stdint.h>
 #include <X11/Xlib.h>
+
+#define PROGRAM_NAME "dwmstatus"
+
+/* Sleep time between refreshing */
+#define PERIOD_S 10
 
 #define UNUSED(x) do { (void) x; } while (false)
 
-const char *tzmadr = "Europe/Madrid";
-
+const char *timezone_madrid = "Europe/Madrid";
 static Display *dpy;
 
 char* smprintf(const char *fmt, ...)
 {
     va_list fmtargs;
     va_start(fmtargs, fmt);
-    int len = vsnprintf(NULL, 0, fmt, fmtargs);
+    uint64_t len = vsnprintf(NULL, 0, fmt, fmtargs);
     va_end(fmtargs);
 
     char* ret = malloc(++len);
@@ -41,33 +45,31 @@ char* smprintf(const char *fmt, ...)
     return ret;
 }
 
-char* mktimes(const char *fmt, const char *tzname)
+char* GetTimeFromTZ(const char *fmt, const char *timezone_name)
 {
-    char buf[129];
-    time_t tim;
-    struct tm *timtm;
-
-    setenv("TZ", tzname, 1);
-    tim = time(NULL);
-    timtm = localtime(&tim);
-    if (timtm == NULL)
+    setenv("TZ", timezone_name, 1);
+    time_t utc_time = time(NULL);
+    struct tm* local_time = localtime(&utc_time);
+    if (local_time == NULL) {
         return smprintf("");
+    }
 
-    if (!strftime(buf, sizeof(buf)-1, fmt, timtm)) {
+    char time_buffer[129];
+    if (!strftime(time_buffer, sizeof(time_buffer) - 1, fmt, local_time)) {
         fprintf(stderr, "strftime == 0\n");
         return smprintf("");
     }
 
-    return smprintf("%s", buf);
+    return smprintf("%s", time_buffer);
 }
 
-void setstatus(const char *str)
+void SetStatus(const char *str)
 {
     XStoreName(dpy, DefaultRootWindow(dpy), str);
     XSync(dpy, False);
 }
 
-char* readfile(const char *base, const char *file)
+char* ReadFile(const char *base, const char *file)
 {
     char line[513];
     memset(line, 0, sizeof(line));
@@ -88,13 +90,9 @@ char* readfile(const char *base, const char *file)
     return smprintf("%s", line);
 }
 
-char* getbattery(const char *base)
+char* GetBattery(const char *base)
 {
-    char *co;
-    int descap = -1;
-    int remcap = -1;
-
-    co = readfile(base, "present");
+    char* co = ReadFile(base, "present");
     if (co == NULL) {
         return smprintf("");
     }
@@ -105,46 +103,48 @@ char* getbattery(const char *base)
     }
     free(co);
 
-    co = readfile(base, "charge_full_design");
+    co = ReadFile(base, "charge_full_design");
     if (co == NULL) {
-        co = readfile(base, "energy_full_design");
+        co = ReadFile(base, "energy_full_design");
         if (co == NULL) {
             return smprintf("");
         }
     }
-    sscanf(co, "%d", &descap);
+    int64_t descap = -1;
+    sscanf(co, "%ld", &descap);
     free(co);
 
-    co = readfile(base, "charge_now");
+    co = ReadFile(base, "charge_now");
     if (co == NULL) {
-        co = readfile(base, "energy_now");
+        co = ReadFile(base, "energy_now");
         if (co == NULL) {
             return smprintf("");
         }
     }
-    sscanf(co, "%d", &remcap);
+    int64_t remcap = -1;
+    sscanf(co, "%ld", &remcap);
     free(co);
 
-    char status[11];
-    co = readfile(base, "status");
-    if (!strncmp(co, "Discharging", 11)) {
-        sprintf(status, " Unplugged");
-    } else if(!strncmp(co, "Charging", 8)) {
-        sprintf(status, " Charging");
+    char battery_status[11];
+    co = ReadFile(base, "status");
+    if (strncmp(co, "Discharging", 11) == 0) {
+        sprintf(battery_status, " Unplugged");
+    } else if(strncmp(co, "Charging", 8) == 0) {
+        sprintf(battery_status, " Charging");
     } else {
-        sprintf(status, " Unknown");
+        sprintf(battery_status, " Unknown");
     }
 
     if (remcap < 0 || descap < 0) {
         return smprintf("invalid");
     }
 
-    return smprintf("%.0f%%%s", ((float)remcap / (float)descap) * 100, status);
+    return smprintf("%.0f%%%s", ((float)remcap / (float)descap) * 100, battery_status);
 }
 
-char* gettemperature(const char *base, const char *sensor)
+char* GetTemperature(const char *base, const char *sensor)
 {
-    char* co = readfile(base, sensor);
+    char* co = ReadFile(base, sensor);
     if (co == NULL) {
         return smprintf("");
     }
@@ -157,26 +157,26 @@ int main(int argc, char** argv)
     UNUSED(argv);
 
     if (!(dpy = XOpenDisplay(NULL))) {
-        fprintf(stderr, "dwmstatus: cannot open display.\n");
+        fprintf(stderr, PROGRAM_NAME": cannot open display.\n");
         return 1;
     }
 
     while (true) {
-        char* bat = getbattery("/sys/class/power_supply/BAT1");
-        char* tmadr = mktimes("%H:%M:%S", tzmadr);
-        char* t0 = gettemperature("/sys/devices/virtual/thermal/thermal_zone0", "temp");
-        char* t1 = gettemperature("/sys/devices/virtual/thermal/thermal_zone1", "temp");
+        char* battery = GetBattery("/sys/class/power_supply/BAT1");
+        char* T0 = GetTemperature("/sys/devices/virtual/thermal/thermal_zone0", "temp");
+        char* T1 = GetTemperature("/sys/devices/virtual/thermal/thermal_zone1", "temp");
+        char* t = GetTimeFromTZ("%H:%M:%S", timezone_madrid);
 
-        char* status = smprintf(" B:%s T:%s|%s Madrid: %s ", bat, t0, t1, tmadr);
-        setstatus(status);
+        char* status = smprintf(" %s %s|%s %s ", battery, T0, T1, t);
+        SetStatus(status);
 
-        free(t0);
-        free(t1);
-        free(bat);
-        free(tmadr);
+        free(T0);
+        free(T1);
+        free(battery);
+        free(t);
         free(status);
 
-        sleep(10);
+        sleep(PERIOD_S);
     }
 
     XCloseDisplay(dpy);

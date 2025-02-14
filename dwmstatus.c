@@ -24,6 +24,7 @@
 #define PLUG_EMOJI "🔌"
 #define TEMP_EMOJI "🌡"
 #define CLOCK_EMOJI "⏰"
+#define CALENDAR_EMOJI "📅"
 
 #define TIMEZONE "Europe/Madrid"
 
@@ -138,7 +139,7 @@ char* GetBattery(const char* base)
     } else if(strncmp(co, "Charging", 8) == 0) {
         sprintf(battery_status, PLUG_EMOJI);
     } else {
-        sprintf(battery_status, "?");
+        sprintf(battery_status, PLUG_EMOJI);
     }
 
     if (battery_charge < 0 || battery_max_charge < 0) {
@@ -174,8 +175,9 @@ int main(int argc, char** argv)
         char* battery = GetBattery("/sys/class/power_supply/BAT1");
         char* T1 = GetTemperature("/sys/devices/virtual/thermal/thermal_zone1", "temp");
         char* t = GetTimeFromTZ("%H:%M:%S", TIMEZONE);
+        char* d = GetTimeFromTZ("%d/%m/%Y", TIMEZONE);
 
-        char* status = smprintf(" %s "TEMP_EMOJI"%s "CLOCK_EMOJI"%s ", battery, T1, t);
+        char* status = smprintf(" %s "TEMP_EMOJI"%s "CLOCK_EMOJI"%s "CALENDAR_EMOJI"%s ", battery, T1, t, d);
         SetStatus(status);
 
         free(T1);

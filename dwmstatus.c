@@ -21,6 +21,7 @@
 #define PERIOD_S 10
 
 #define BATTERY_EMOJI "🔋"
+#define SUN_EMOJI "☼"
 #define PLUG_EMOJI "🔌"
 #define TEMP_EMOJI "🌡"
 #define CLOCK_EMOJI "⏰"
@@ -177,7 +178,11 @@ int main(int argc, char** argv)
         char* t = GetTimeFromTZ("%H:%M:%S", TIMEZONE);
         char* d = GetTimeFromTZ("%d/%m/%Y", TIMEZONE);
 
-        char* status = smprintf(" %s "TEMP_EMOJI"%s "CLOCK_EMOJI"%s "CALENDAR_EMOJI"%s ", battery, T1, t, d);
+        char* brightness = ReadFile("/sys/class/backlight/intel_backlight", "brightness");
+        char* max_brightness = ReadFile("/sys/class/backlight/intel_backlight", "max_brightness");
+        char* brightness_str = smprintf("%.1f%%", atof(brightness) / atof(max_brightness) * 100.0);
+
+        char* status = smprintf(" "SUN_EMOJI"%s %s "TEMP_EMOJI"%s "CLOCK_EMOJI"%s "CALENDAR_EMOJI"%s ", brightness_str, battery, T1, t, d);
         SetStatus(status);
 
         free(T1);

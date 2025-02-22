@@ -26,6 +26,7 @@
 #define TEMP_EMOJI "🌡"
 #define CLOCK_EMOJI "⏰"
 #define CALENDAR_EMOJI "📅"
+#define SPEAKER_EMOJI "🔊"
 
 #define TIMEZONE "Europe/Madrid"
 
@@ -147,7 +148,7 @@ char* GetBattery(const char* base)
         return smprintf("invalid");
     }
 
-    return smprintf("%s%.2f%%", battery_status, ((float) battery_charge / (float) battery_max_charge) * 100);
+    return smprintf("%s%.0f%%", battery_status, ((float) battery_charge / (float) battery_max_charge) * 100);
 }
 
 char* GetTemperature(const char *base, const char *sensor)
@@ -156,7 +157,7 @@ char* GetTemperature(const char *base, const char *sensor)
     if (co == NULL) {
         return smprintf("");
     }
-    return smprintf("%02.2f°C", atof(co) / 1000);
+    return smprintf("%2.0f°C", atof(co) / 1000);
 }
 
 int main(int argc, char** argv)
@@ -180,9 +181,19 @@ int main(int argc, char** argv)
 
         char* brightness = ReadFile("/sys/class/backlight/intel_backlight", "brightness");
         char* max_brightness = ReadFile("/sys/class/backlight/intel_backlight", "max_brightness");
-        char* brightness_str = smprintf("%.1f%%", atof(brightness) / atof(max_brightness) * 100.0);
+        char* brightness_str = smprintf("%.0f%%", atof(brightness) / atof(max_brightness) * 100.0);
 
-        char* status = smprintf(" "SUN_EMOJI"%s %s "TEMP_EMOJI"%s "CLOCK_EMOJI"%s "CALENDAR_EMOJI"%s ", brightness_str, battery, T1, t, d);
+        FILE* fp = popen("echo -n $(amixer sget Master | awk -F'[][]' '/%/ { print $2 }')", "r");
+        if (fp == NULL) {
+            perror("Failed to run amixer");
+        }
+        char volume[5];
+        if (!fgets(volume, sizeof(volume), fp)) {
+            perror("Failed to read volume pipe");
+        }
+        pclose(fp);
+
+        char* status = smprintf(" "SPEAKER_EMOJI"%s "SUN_EMOJI"%s %s "TEMP_EMOJI"%s "CLOCK_EMOJI"%s "CALENDAR_EMOJI"%s ", volume, brightness_str, battery, T1, t, d);
         SetStatus(status);
 
         free(T1);

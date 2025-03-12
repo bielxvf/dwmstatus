@@ -18,7 +18,7 @@
 #define PROGRAM_NAME "dwmstatus"
 
 /* Sleep time between refreshing */
-#define PERIOD_S 10
+#define PERIOD_S 1
 
 #define BATTERY_EMOJI "🔋"
 #define SUN_EMOJI "☼"
